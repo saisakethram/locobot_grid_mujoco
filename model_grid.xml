@@ -120,6 +120,10 @@
       <geom name="chassis" type="box" size="0.085 0.085 0.055" pos="0 0 -0.11" mass="1.2" rgba="0.1 0.55 0.6 1"/>
       <!-- yaw stage housing, O170 x 100 -->
       <geom type="cylinder" size="0.085 0.05" pos="0 0 -0.215" mass="0.3" rgba="0.9 0.9 0.9 1"/>
+      <!-- down-looking USB camera on the stage side (drawing: 34.65 offset, bot-fixed).
+           MuJoCo cameras look along their -Z: identity orientation = straight down. -->
+      <geom type="box" size="0.012 0.010 0.010" pos="0.097 0 -0.215" mass="0.02" rgba="0.2 0.2 0.2 1"/>
+      <camera name="down_cam" pos="0.097 0 -0.228" fovy="55"/>
 
       <body name="arm_base" pos="0 0 -0.265">
         <joint name="j1_yaw" type="hinge" axis="0 0 1" range="-3.1 3.1"/>
