@@ -1,0 +1,231 @@
+<mujoco model="locobot_fleet_v1">
+  <!-- Dimensions extracted from Full_Grid.glb (meters):
+       lanes y=0.231/0.551, stations x=0.211/1.251, segment 292mm, gauge 80mm,
+       fixed rails x 0.391..1.091, bot 247x228mm, charging bay x>1.40 -->
+
+  <compiler angle="radian"/>
+
+  <option timestep="0.002" gravity="0 0 -9.81"/>
+  <visual><headlight ambient="0.45 0.45 0.45" diffuse="0.55 0.55 0.55"/></visual>
+
+  <default>
+    <joint damping="0.05"/>
+    <position kp="8" forcerange="-1.47 1.47"/>
+    <default class="frame">
+      <geom contype="0" conaffinity="0" rgba="0.15 0.15 0.15 1"/>
+    </default>
+    <default class="cweb">
+      <geom contype="0" conaffinity="0" type="box" rgba="0.45 0.45 0.48 1"/>
+    </default>
+  </default>
+
+  <worldbody>
+    <geom name="floor" type="plane" size="2 2 0.1" pos="0.88 0.35 -0.5" rgba="0.87 0.86 0.83 1"/>
+
+    <!-- frame rails (visual only): the four fixed lane rails + frame edges -->
+    <!-- fixed lane rails: real C-section 100x50, web 6.4, flange 7.9, clear 147.2 -->
+    <geom class="cweb" size="0.35 0.0032 0.05"   pos="0.741 0.3078 0.41"/>
+    <geom class="cweb" size="0.35 0.0218 0.00395" pos="0.741 0.2828 0.4560"/>
+    <geom class="cweb" size="0.35 0.0218 0.00395" pos="0.741 0.2828 0.3640"/>
+    <geom class="cweb" size="0.35 0.0032 0.05"   pos="0.741 0.1542 0.41"/>
+    <geom class="cweb" size="0.35 0.0218 0.00395" pos="0.741 0.1792 0.4560"/>
+    <geom class="cweb" size="0.35 0.0218 0.00395" pos="0.741 0.1792 0.3640"/>
+    <geom class="cweb" size="0.35 0.0032 0.05"   pos="0.741 0.6278 0.41"/>
+    <geom class="cweb" size="0.35 0.0218 0.00395" pos="0.741 0.6028 0.4560"/>
+    <geom class="cweb" size="0.35 0.0218 0.00395" pos="0.741 0.6028 0.3640"/>
+    <geom class="cweb" size="0.35 0.0032 0.05"   pos="0.741 0.4742 0.41"/>
+    <geom class="cweb" size="0.35 0.0218 0.00395" pos="0.741 0.4992 0.4560"/>
+    <geom class="cweb" size="0.35 0.0218 0.00395" pos="0.741 0.4992 0.3640"/>
+    <!-- charging bay rails, BOTH lanes continue into the bay -->
+    <geom class="cweb" size="0.15 0.0032 0.05"   pos="1.59 0.6278 0.41"/>
+    <geom class="cweb" size="0.15 0.0218 0.00395" pos="1.59 0.6028 0.456"/>
+    <geom class="cweb" size="0.15 0.0218 0.00395" pos="1.59 0.6028 0.364"/>
+    <geom class="cweb" size="0.15 0.0032 0.05"   pos="1.59 0.4742 0.41"/>
+    <geom class="cweb" size="0.15 0.0218 0.00395" pos="1.59 0.4992 0.456"/>
+    <geom class="cweb" size="0.15 0.0218 0.00395" pos="1.59 0.4992 0.364"/>
+
+    <geom class="cweb" size="0.15 0.0032 0.05"   pos="1.59 0.3078 0.41"/>
+    <geom class="cweb" size="0.15 0.0218 0.00395" pos="1.59 0.2828 0.4560"/>
+    <geom class="cweb" size="0.15 0.0218 0.00395" pos="1.59 0.2828 0.3640"/>
+    <geom class="cweb" size="0.15 0.0032 0.05"   pos="1.59 0.1542 0.41"/>
+    <geom class="cweb" size="0.15 0.0218 0.00395" pos="1.59 0.1792 0.4560"/>
+    <geom class="cweb" size="0.15 0.0218 0.00395" pos="1.59 0.1792 0.3640"/>
+    <!-- frame outline -->
+    <geom class="frame" type="box" size="0.88 0.01 0.01" pos="0.911 0.041 0.5"/>
+    <geom class="frame" type="box" size="0.88 0.01 0.01" pos="0.911 0.741 0.5"/>
+    <geom class="frame" type="box" size="0.01 0.35 0.01" pos="0.031 0.391 0.5"/>
+    <geom class="frame" type="box" size="0.01 0.35 0.01" pos="1.791 0.391 0.5"/>
+    <geom class="frame" type="box" size="0.01 0.01 0.5" pos="0.031 0.041 0.0"/>
+    <geom class="frame" type="box" size="0.01 0.01 0.5" pos="0.031 0.741 0.0"/>
+    <geom class="frame" type="box" size="0.01 0.01 0.5" pos="1.791 0.041 0.0"/>
+    <geom class="frame" type="box" size="0.01 0.01 0.5" pos="1.791 0.741 0.0"/>
+
+    <!-- ============ TURNTABLES: hinge about Z, rail segment rides on top ============ -->
+    <!-- left station x=0.211: A1 (lane A) + B1 (lane B), shaft-coupled via equality -->
+    <body name="tt_A1" pos="0.211 0.231 0.492">
+      <joint name="tt_A1_rot" type="hinge" axis="0 0 1" damping="8"/>
+      <geom type="cylinder" size="0.060 0.006" contype="0" conaffinity="0" rgba="0.55 0.55 0.6 1"/>
+      <geom class="cweb" size="0.146 0.0032 0.05"    pos="0 0.0768 -0.082"/>
+      <geom class="cweb" size="0.146 0.0218 0.00395" pos="0 0.0518 -0.036"/>
+      <geom class="cweb" size="0.146 0.0218 0.00395" pos="0 0.0518 -0.128"/>
+      <geom class="cweb" size="0.146 0.0032 0.05"    pos="0 -0.0768 -0.082"/>
+      <geom class="cweb" size="0.146 0.0218 0.00395" pos="0 -0.0518 -0.036"/>
+      <geom class="cweb" size="0.146 0.0218 0.00395" pos="0 -0.0518 -0.128"/>
+    </body>
+    <body name="tt_B1" pos="0.211 0.551 0.492">
+      <joint name="tt_B1_rot" type="hinge" axis="0 0 1" damping="8"/>
+      <geom type="cylinder" size="0.060 0.006" contype="0" conaffinity="0" rgba="0.55 0.55 0.6 1"/>
+      <geom class="cweb" size="0.146 0.0032 0.05"    pos="0 0.0768 -0.082"/>
+      <geom class="cweb" size="0.146 0.0218 0.00395" pos="0 0.0518 -0.036"/>
+      <geom class="cweb" size="0.146 0.0218 0.00395" pos="0 0.0518 -0.128"/>
+      <geom class="cweb" size="0.146 0.0032 0.05"    pos="0 -0.0768 -0.082"/>
+      <geom class="cweb" size="0.146 0.0218 0.00395" pos="0 -0.0518 -0.036"/>
+      <geom class="cweb" size="0.146 0.0218 0.00395" pos="0 -0.0518 -0.128"/>
+    </body>
+    <!-- right station x=1.251: A2 + B2 -->
+    <body name="tt_A2" pos="1.251 0.231 0.492">
+      <joint name="tt_A2_rot" type="hinge" axis="0 0 1" damping="8"/>
+      <geom type="cylinder" size="0.060 0.006" contype="0" conaffinity="0" rgba="0.55 0.55 0.6 1"/>
+      <geom class="cweb" size="0.146 0.0032 0.05"    pos="0 0.0768 -0.082"/>
+      <geom class="cweb" size="0.146 0.0218 0.00395" pos="0 0.0518 -0.036"/>
+      <geom class="cweb" size="0.146 0.0218 0.00395" pos="0 0.0518 -0.128"/>
+      <geom class="cweb" size="0.146 0.0032 0.05"    pos="0 -0.0768 -0.082"/>
+      <geom class="cweb" size="0.146 0.0218 0.00395" pos="0 -0.0518 -0.036"/>
+      <geom class="cweb" size="0.146 0.0218 0.00395" pos="0 -0.0518 -0.128"/>
+    </body>
+    <body name="tt_B2" pos="1.251 0.551 0.492">
+      <joint name="tt_B2_rot" type="hinge" axis="0 0 1" damping="8"/>
+      <geom type="cylinder" size="0.060 0.006" contype="0" conaffinity="0" rgba="0.55 0.55 0.6 1"/>
+      <geom class="cweb" size="0.146 0.0032 0.05"    pos="0 0.0768 -0.082"/>
+      <geom class="cweb" size="0.146 0.0218 0.00395" pos="0 0.0518 -0.036"/>
+      <geom class="cweb" size="0.146 0.0218 0.00395" pos="0 0.0518 -0.128"/>
+      <geom class="cweb" size="0.146 0.0032 0.05"    pos="0 -0.0768 -0.082"/>
+      <geom class="cweb" size="0.146 0.0218 0.00395" pos="0 -0.0518 -0.036"/>
+      <geom class="cweb" size="0.146 0.0218 0.00395" pos="0 -0.0518 -0.128"/>
+    </body>
+
+    <!-- ============ THE BOT: as-drawn dims (Loco_Arm_Bot.pdf, 2026-08-25) ============
+         wheels O65x28, wheelbase 84 (x, c-t-c), track 130 outer-to-outer (centers +/-51); chassis 169.85x170; yaw stage O170x100;
+         arm chain 39.13 / 135.73 / 186.1 / 154.84 -->
+    <body name="bot" pos="0.741 0.231 0.41">
+      <joint name="bot_x"   type="slide" axis="1 0 0" range="-0.681 0.959" damping="2"/>
+      <joint name="bot_y"   type="slide" axis="0 1 0" range="-0.051 0.329" damping="2"/>
+      <joint name="bot_yaw" type="hinge" axis="0 0 1" range="-0.1 1.67" damping="1"/>
+      <!-- four wheels riding inside the C-channels (axle plane = body origin, z=0.41) -->
+      <geom type="cylinder" size="0.0325 0.014" zaxis="0 1 0" pos=" 0.042  0.051 0" mass="0.05" rgba="0.12 0.12 0.12 1"/>
+      <geom type="cylinder" size="0.0325 0.014" zaxis="0 1 0" pos=" 0.042 -0.051 0" mass="0.05" rgba="0.12 0.12 0.12 1"/>
+      <geom type="cylinder" size="0.0325 0.014" zaxis="0 1 0" pos="-0.042  0.051 0" mass="0.05" rgba="0.12 0.12 0.12 1"/>
+      <geom type="cylinder" size="0.0325 0.014" zaxis="0 1 0" pos="-0.042 -0.051 0" mass="0.05" rgba="0.12 0.12 0.12 1"/>
+      <!-- chassis / electronics box, top clears the channel undersides -->
+      <geom name="chassis" type="box" size="0.085 0.085 0.055" pos="0 0 -0.11" mass="1.2" rgba="0.1 0.55 0.6 1"/>
+      <!-- yaw stage housing, O170 x 100 -->
+      <geom type="cylinder" size="0.085 0.05" pos="0 0 -0.215" mass="0.3" rgba="0.9 0.9 0.9 1"/>
+      <!-- down-looking USB camera on the stage side (drawing: 34.65 offset, bot-fixed).
+           MuJoCo cameras look along their -Z: identity orientation = straight down. -->
+      <geom type="box" size="0.012 0.010 0.010" pos="0.097 0 -0.215" mass="0.02" rgba="0.2 0.2 0.2 1"/>
+      <camera name="down_cam" pos="0.097 0 -0.228" fovy="55"/>
+
+      <body name="arm_base" pos="0 0 -0.265">
+        <joint name="j1_yaw" type="hinge" axis="0 0 1" range="-3.1 3.1"/>
+        <geom type="cylinder" size="0.04 0.0196" pos="0 0 -0.0196" mass="0.09" rgba="0.1 0.55 0.6 1"/>
+        <body name="upper_arm" pos="0 0 -0.0391">
+          <joint name="j2_shoulder" type="hinge" axis="0 1 0" range="-1.9 1.9"/>
+          <geom type="capsule" fromto="0 0 0 0 0 -0.1357" size="0.032" mass="0.12" rgba="0.9 0.9 0.9 1"/>
+          <body name="forearm" pos="0 0 -0.1357">
+            <joint name="j3_elbow" type="hinge" axis="0 1 0" range="-2.4 2.4"/>
+            <geom type="capsule" fromto="0 0 0 0 0 -0.1861" size="0.028" mass="0.12" rgba="0.9 0.9 0.9 1"/>
+            <body name="wrist" pos="0 0 -0.1861">
+              <joint name="j4_wrist_pitch" type="hinge" axis="0 1 0" range="-1.9 1.9"/>
+              <geom type="capsule" fromto="0 0 0 0 0 -0.09" size="0.025" mass="0.09" rgba="0.1 0.55 0.6 1"/>
+              <body name="gripper" pos="0 0 -0.09">
+                <joint name="j5_wrist_roll" type="hinge" axis="0 0 1" range="-3.1 3.1"/>
+                <geom type="box" size="0.018 0.014 0.0324" pos="0 0 -0.0324" mass="0.09" rgba="0.9 0.7 0.1 1"/>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+    <body name="bot2" pos="1.0 0.551 0.41">
+      <joint name="b2_x"   type="slide" axis="1 0 0" range="-0.94 0.70" damping="2"/>
+      <joint name="b2_y"   type="slide" axis="0 1 0" range="-0.371 0.049" damping="2"/>
+      <joint name="b2_yaw" type="hinge" axis="0 0 1" range="-0.1 1.67" damping="1"/>
+      <!-- four wheels riding inside the C-channels (axle plane = body origin, z=0.41) -->
+      <geom type="cylinder" size="0.0325 0.014" zaxis="0 1 0" pos=" 0.042  0.051 0" mass="0.05" rgba="0.12 0.12 0.12 1"/>
+      <geom type="cylinder" size="0.0325 0.014" zaxis="0 1 0" pos=" 0.042 -0.051 0" mass="0.05" rgba="0.12 0.12 0.12 1"/>
+      <geom type="cylinder" size="0.0325 0.014" zaxis="0 1 0" pos="-0.042  0.051 0" mass="0.05" rgba="0.12 0.12 0.12 1"/>
+      <geom type="cylinder" size="0.0325 0.014" zaxis="0 1 0" pos="-0.042 -0.051 0" mass="0.05" rgba="0.12 0.12 0.12 1"/>
+      <!-- chassis / electronics box, top clears the channel undersides -->
+      <geom name="chassis2" type="box" size="0.085 0.085 0.055" pos="0 0 -0.11" mass="1.2" rgba="0.85 0.45 0.25 1"/>
+      <!-- yaw stage housing, O170 x 100 -->
+      <geom type="cylinder" size="0.085 0.05" pos="0 0 -0.215" mass="0.3" rgba="0.9 0.9 0.9 1"/>
+      <!-- down-looking USB camera on the stage side (drawing: 34.65 offset, bot-fixed).
+           MuJoCo cameras look along their -Z: identity orientation = straight down. -->
+      <geom type="box" size="0.012 0.010 0.010" pos="0.097 0 -0.215" mass="0.02" rgba="0.2 0.2 0.2 1"/>
+      <camera name="down_cam_b2" pos="0.097 0 -0.228" fovy="55"/>
+
+      <body name="arm_base2" pos="0 0 -0.265">
+        <joint name="j1_yaw_b2" type="hinge" axis="0 0 1" range="-3.1 3.1"/>
+        <geom type="cylinder" size="0.04 0.0196" pos="0 0 -0.0196" mass="0.09" rgba="0.85 0.45 0.25 1"/>
+        <body name="upper_arm2" pos="0 0 -0.0391">
+          <joint name="j2_shoulder_b2" type="hinge" axis="0 1 0" range="-1.9 1.9"/>
+          <geom type="capsule" fromto="0 0 0 0 0 -0.1357" size="0.032" mass="0.12" rgba="0.9 0.9 0.9 1"/>
+          <body name="forearm2" pos="0 0 -0.1357">
+            <joint name="j3_elbow_b2" type="hinge" axis="0 1 0" range="-2.4 2.4"/>
+            <geom type="capsule" fromto="0 0 0 0 0 -0.1861" size="0.028" mass="0.12" rgba="0.9 0.9 0.9 1"/>
+            <body name="wrist2" pos="0 0 -0.1861">
+              <joint name="j4_wrist_pitch_b2" type="hinge" axis="0 1 0" range="-1.9 1.9"/>
+              <geom type="capsule" fromto="0 0 0 0 0 -0.09" size="0.025" mass="0.09" rgba="0.85 0.45 0.25 1"/>
+              <body name="gripper2" pos="0 0 -0.09">
+                <joint name="j5_wrist_roll_b2" type="hinge" axis="0 0 1" range="-3.1 3.1"/>
+                <geom type="box" size="0.018 0.014 0.0324" pos="0 0 -0.0324" mass="0.09" rgba="0.9 0.7 0.1 1"/>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+
+  <equality>
+    <!-- the shared drive shaft at each station: both turntables rotate together -->
+    <joint joint1="tt_A1_rot" joint2="tt_B1_rot" polycoef="0 1 0 0 0"/>
+    <joint joint1="tt_A2_rot" joint2="tt_B2_rot" polycoef="0 1 0 0 0"/>
+  </equality>
+
+  <actuator>
+    <!-- bot drive: same N20, direction resolved by which axis it's traveling -->
+    <velocity name="drive_x" joint="bot_x" kv="40" ctrlrange="-0.13 0.13" forcerange="-8 8"/>
+    <velocity name="drive_y" joint="bot_y" kv="40" ctrlrange="-0.13 0.13" forcerange="-8 8"/>
+    <!-- bot yaw follows the turntable during rotation (soft lock behavior) -->
+    <position name="yaw_hold" joint="bot_yaw" kp="20" forcerange="-3 3" ctrlrange="-0.1 1.67"/>
+    <!-- one worm-geared motor per station drives the coupled pair; worm = stiff, not backdrivable -->
+    <position name="tt_left"  joint="tt_A1_rot" kp="60" forcerange="-20 20" ctrlrange="0 1.5708"/>
+    <position name="tt_right" joint="tt_A2_rot" kp="60" forcerange="-20 20" ctrlrange="0 1.5708"/>
+    <!-- arm -->
+    <velocity name="drive2_x" joint="b2_x" kv="40" ctrlrange="-0.13 0.13" forcerange="-8 8"/>
+    <velocity name="drive2_y" joint="b2_y" kv="40" ctrlrange="-0.13 0.13" forcerange="-8 8"/>
+    <position name="yaw2_hold" joint="b2_yaw" kp="20" forcerange="-3 3" ctrlrange="-0.1 1.67"/>
+    <position name="a1" joint="j1_yaw" ctrlrange="-3.1 3.1"/>
+    <position name="a2" joint="j2_shoulder" ctrlrange="-1.9 1.9"/>
+    <position name="a3" joint="j3_elbow" ctrlrange="-2.4 2.4"/>
+    <position name="a4" joint="j4_wrist_pitch" ctrlrange="-1.9 1.9"/>
+    <position name="a5" joint="j5_wrist_roll" ctrlrange="-3.1 3.1"/>
+    <position name="a1_b2" joint="j1_yaw_b2" ctrlrange="-3.1 3.1"/>
+    <position name="a2_b2" joint="j2_shoulder_b2" ctrlrange="-1.9 1.9"/>
+    <position name="a3_b2" joint="j3_elbow_b2" ctrlrange="-2.4 2.4"/>
+    <position name="a4_b2" joint="j4_wrist_pitch_b2" ctrlrange="-1.9 1.9"/>
+    <position name="a5_b2" joint="j5_wrist_roll_b2" ctrlrange="-3.1 3.1"/>
+  </actuator>
+
+  <sensor>
+    <jointpos name="bot_x_pos" joint="bot_x"/>
+    <jointpos name="bot_y_pos" joint="bot_y"/>
+    <jointpos name="bot_yaw_pos" joint="bot_yaw"/>
+    <jointpos name="b2_x_pos" joint="b2_x"/>
+    <jointpos name="b2_y_pos" joint="b2_y"/>
+    <jointpos name="b2_yaw_pos" joint="b2_yaw"/>
+    <jointpos name="tt_left_pos" joint="tt_A1_rot"/>
+    <jointpos name="tt_right_pos" joint="tt_A2_rot"/>
+  </sensor>
+</mujoco>
