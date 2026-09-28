@@ -11,6 +11,14 @@
   <default>
     <joint damping="0.05"/>
     <position kp="8" forcerange="-1.47 1.47"/>
+    <!-- Waveshare SC15 arm servo: 17 kg.cm @ 8.4 V = 1.67 N.m. kp is a GUESS
+         (full torque at ~5 deg error) until the bench sag test measures it.
+         armature = gearbox-reflected rotor inertia; dampratio = critically
+         damped, so the servo itself doesn't ring. -->
+    <default class="sc15">
+      <position kp="20" dampratio="1" forcerange="-1.67 1.67"/>
+      <joint armature="0.01"/>
+    </default>
     <default class="frame">
       <geom contype="0" conaffinity="0" rgba="0.15 0.15 0.15 1"/>
     </default>
@@ -126,19 +134,21 @@
       <camera name="down_cam" pos="0.097 0 -0.228" fovy="55"/>
 
       <body name="arm_base" pos="0 0 -0.265">
-        <joint name="j1_yaw" type="hinge" axis="0 0 1" range="-3.1 3.1"/>
+        <joint class="sc15" name="j1_yaw" type="hinge" axis="0 0 1" range="-3.1 3.1"/>
         <geom type="cylinder" size="0.04 0.0196" pos="0 0 -0.0196" mass="0.09" rgba="0.1 0.55 0.6 1"/>
         <body name="upper_arm" pos="0 0 -0.0391">
-          <joint name="j2_shoulder" type="hinge" axis="0 1 0" range="-1.9 1.9"/>
+          <joint class="sc15" name="j2_shoulder" type="hinge" axis="0 1 0" range="-1.9 1.9"/>
           <geom type="capsule" fromto="0 0 0 0 0 -0.1357" size="0.032" mass="0.12" rgba="0.9 0.9 0.9 1"/>
           <body name="forearm" pos="0 0 -0.1357">
-            <joint name="j3_elbow" type="hinge" axis="0 1 0" range="-2.4 2.4"/>
+            <joint class="sc15" name="j3_elbow" type="hinge" axis="0 1 0" range="-2.4 2.4"/>
             <geom type="capsule" fromto="0 0 0 0 0 -0.1861" size="0.028" mass="0.12" rgba="0.9 0.9 0.9 1"/>
             <body name="wrist" pos="0 0 -0.1861">
-              <joint name="j4_wrist_pitch" type="hinge" axis="0 1 0" range="-1.9 1.9"/>
+              <joint class="sc15" name="j4_wrist_pitch" type="hinge" axis="0 1 0" range="-1.9 1.9"/>
               <geom type="capsule" fromto="0 0 0 0 0 -0.09" size="0.025" mass="0.09" rgba="0.1 0.55 0.6 1"/>
               <body name="gripper" pos="0 0 -0.09">
-                <joint name="j5_wrist_roll" type="hinge" axis="0 0 1" range="-3.1 3.1"/>
+                <joint class="sc15" name="j5_wrist_roll" type="hinge" axis="0 0 1" range="-3.1 3.1"/>
+                <!-- gripper tip: wrist pitch -> tip = 90 + 64.8 = 154.8 mm (doc L3) -->
+                <site name="tip" pos="0 0 -0.0648" size="0.006" rgba="1 0.4 0 1"/>
                 <geom type="box" size="0.018 0.014 0.0324" pos="0 0 -0.0324" mass="0.09" rgba="0.9 0.7 0.1 1"/>
               </body>
             </body>
@@ -165,19 +175,21 @@
       <camera name="down_cam_b2" pos="0.097 0 -0.228" fovy="55"/>
 
       <body name="arm_base2" pos="0 0 -0.265">
-        <joint name="j1_yaw_b2" type="hinge" axis="0 0 1" range="-3.1 3.1"/>
+        <joint class="sc15" name="j1_yaw_b2" type="hinge" axis="0 0 1" range="-3.1 3.1"/>
         <geom type="cylinder" size="0.04 0.0196" pos="0 0 -0.0196" mass="0.09" rgba="0.85 0.45 0.25 1"/>
         <body name="upper_arm2" pos="0 0 -0.0391">
-          <joint name="j2_shoulder_b2" type="hinge" axis="0 1 0" range="-1.9 1.9"/>
+          <joint class="sc15" name="j2_shoulder_b2" type="hinge" axis="0 1 0" range="-1.9 1.9"/>
           <geom type="capsule" fromto="0 0 0 0 0 -0.1357" size="0.032" mass="0.12" rgba="0.9 0.9 0.9 1"/>
           <body name="forearm2" pos="0 0 -0.1357">
-            <joint name="j3_elbow_b2" type="hinge" axis="0 1 0" range="-2.4 2.4"/>
+            <joint class="sc15" name="j3_elbow_b2" type="hinge" axis="0 1 0" range="-2.4 2.4"/>
             <geom type="capsule" fromto="0 0 0 0 0 -0.1861" size="0.028" mass="0.12" rgba="0.9 0.9 0.9 1"/>
             <body name="wrist2" pos="0 0 -0.1861">
-              <joint name="j4_wrist_pitch_b2" type="hinge" axis="0 1 0" range="-1.9 1.9"/>
+              <joint class="sc15" name="j4_wrist_pitch_b2" type="hinge" axis="0 1 0" range="-1.9 1.9"/>
               <geom type="capsule" fromto="0 0 0 0 0 -0.09" size="0.025" mass="0.09" rgba="0.85 0.45 0.25 1"/>
               <body name="gripper2" pos="0 0 -0.09">
-                <joint name="j5_wrist_roll_b2" type="hinge" axis="0 0 1" range="-3.1 3.1"/>
+                <joint class="sc15" name="j5_wrist_roll_b2" type="hinge" axis="0 0 1" range="-3.1 3.1"/>
+                <!-- gripper tip: wrist pitch -> tip = 90 + 64.8 = 154.8 mm (doc L3) -->
+                <site name="tip_b2" pos="0 0 -0.0648" size="0.006" rgba="1 0.4 0 1"/>
                 <geom type="box" size="0.018 0.014 0.0324" pos="0 0 -0.0324" mass="0.09" rgba="0.9 0.7 0.1 1"/>
               </body>
             </body>
@@ -206,22 +218,30 @@
     <velocity name="drive2_x" joint="b2_x" kv="40" ctrlrange="-0.13 0.13" forcerange="-8 8"/>
     <velocity name="drive2_y" joint="b2_y" kv="40" ctrlrange="-0.13 0.13" forcerange="-8 8"/>
     <position name="yaw2_hold" joint="b2_yaw" kp="20" forcerange="-3 3" ctrlrange="-0.1 1.67"/>
-    <position name="a1" joint="j1_yaw" ctrlrange="-3.1 3.1"/>
-    <position name="a2" joint="j2_shoulder" ctrlrange="-1.9 1.9"/>
-    <position name="a3" joint="j3_elbow" ctrlrange="-2.4 2.4"/>
-    <position name="a4" joint="j4_wrist_pitch" ctrlrange="-1.9 1.9"/>
-    <position name="a5" joint="j5_wrist_roll" ctrlrange="-3.1 3.1"/>
-    <position name="a1_b2" joint="j1_yaw_b2" ctrlrange="-3.1 3.1"/>
-    <position name="a2_b2" joint="j2_shoulder_b2" ctrlrange="-1.9 1.9"/>
-    <position name="a3_b2" joint="j3_elbow_b2" ctrlrange="-2.4 2.4"/>
-    <position name="a4_b2" joint="j4_wrist_pitch_b2" ctrlrange="-1.9 1.9"/>
-    <position name="a5_b2" joint="j5_wrist_roll_b2" ctrlrange="-3.1 3.1"/>
+    <position class="sc15" name="a1" joint="j1_yaw" ctrlrange="-3.1 3.1"/>
+    <position class="sc15" name="a2" joint="j2_shoulder" ctrlrange="-1.9 1.9"/>
+    <position class="sc15" name="a3" joint="j3_elbow" ctrlrange="-2.4 2.4"/>
+    <position class="sc15" name="a4" joint="j4_wrist_pitch" ctrlrange="-1.9 1.9"/>
+    <position class="sc15" name="a5" joint="j5_wrist_roll" ctrlrange="-3.1 3.1"/>
+    <position class="sc15" name="a1_b2" joint="j1_yaw_b2" ctrlrange="-3.1 3.1"/>
+    <position class="sc15" name="a2_b2" joint="j2_shoulder_b2" ctrlrange="-1.9 1.9"/>
+    <position class="sc15" name="a3_b2" joint="j3_elbow_b2" ctrlrange="-2.4 2.4"/>
+    <position class="sc15" name="a4_b2" joint="j4_wrist_pitch_b2" ctrlrange="-1.9 1.9"/>
+    <position class="sc15" name="a5_b2" joint="j5_wrist_roll_b2" ctrlrange="-3.1 3.1"/>
   </actuator>
 
   <sensor>
     <jointpos name="bot_x_pos" joint="bot_x"/>
     <jointpos name="bot_y_pos" joint="bot_y"/>
     <jointpos name="bot_yaw_pos" joint="bot_yaw"/>
+    <jointpos name="q1_pos" joint="j1_yaw"/>
+    <jointpos name="q2_pos" joint="j2_shoulder"/>
+    <jointpos name="q3_pos" joint="j3_elbow"/>
+    <jointpos name="q4_pos" joint="j4_wrist_pitch"/>
+    <jointpos name="q1_b2_pos" joint="j1_yaw_b2"/>
+    <jointpos name="q2_b2_pos" joint="j2_shoulder_b2"/>
+    <jointpos name="q3_b2_pos" joint="j3_elbow_b2"/>
+    <jointpos name="q4_b2_pos" joint="j4_wrist_pitch_b2"/>
     <jointpos name="b2_x_pos" joint="b2_x"/>
     <jointpos name="b2_y_pos" joint="b2_y"/>
     <jointpos name="b2_yaw_pos" joint="b2_yaw"/>
