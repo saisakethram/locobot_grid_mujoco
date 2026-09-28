@@ -19,6 +19,40 @@
       <position kp="20" dampratio="1" forcerange="-1.67 1.67"/>
       <joint armature="0.01"/>
     </default>
+    <!-- claw: outer links driven by the 6th SC15 (same gains/cap), range = jaw travel -->
+    <default class="claw">
+      <joint type="hinge" range="0 1.2" armature="0.002" damping="0.02"/>
+      <position kp="20" dampratio="1" forcerange="-1.67 1.67" ctrlrange="0 1.2"/>
+    </default>
+    <!-- jaw counter-rotation joint: held at -(link angle) by equality = parallelogram -->
+    <default class="claw_jaw">
+      <joint type="hinge" range="-1.2 0" armature="0.002" damping="0.02"/>
+    </default>
+    <!-- the parallelogram's inner link is a rigid bar: stiffest stable equality
+         (timeconst = 2x timestep), else squeeze torque twists the jaws -->
+    <default class="rigid_link">
+      <equality solref="0.004 1" solimp="0.95 0.99 0.001"/>
+    </default>
+    <default class="claw_link">
+      <geom type="box" size="0.0025 0.003 0.0175" mass="0.005" rgba="0.2 0.2 0.22 1"/>
+    </default>
+    <default class="claw_jawplate">
+      <geom type="box" size="0.0035 0.010 0.006" mass="0.006" rgba="0.2 0.2 0.22 1"/>
+    </default>
+    <!-- jaw pads: rubber-ish friction + torsional (condim 4) so a pinched cube
+         doesn't spin out. priority=1 makes the pad's contact params win over the
+         object's; stiff solref/solimp keep a full-torque squeeze (~48 N) from
+         sinking the pads mm-deep into a 30 g cube (default contact = 5 mm) -->
+    <default class="jaw">
+      <geom type="box" size="0.0065 0.010 0.0093" mass="0.005" rgba="0.9 0.7 0.1 1"
+            condim="4" friction="1.2 0.02 0.001" priority="1"
+            solref="0.004 1" solimp="0.95 0.99 0.0005"/>
+    </default>
+    <!-- visual-only parts (hubs, inner links): no contact, no mass -->
+    <default class="claw_vis">
+      <geom contype="0" conaffinity="0" mass="0"/>
+      <joint type="hinge" armature="0.0001" damping="0.001"/>
+    </default>
     <default class="frame">
       <geom contype="0" conaffinity="0" rgba="0.15 0.15 0.15 1"/>
     </default>
@@ -67,6 +101,31 @@
     <geom class="frame" type="box" size="0.01 0.01 0.5" pos="0.031 0.741 0.0"/>
     <geom class="frame" type="box" size="0.01 0.01 0.5" pos="1.791 0.041 0.0"/>
     <geom class="frame" type="box" size="0.01 0.01 0.5" pos="1.791 0.741 0.0"/>
+
+    <!-- ============ END TABLES: one past the end of each lane ============
+         160x200 top, surface z=-0.25 (250 mm above the floor), x 1.80..1.96:
+         every cube centre on it is within the arm's vertical-claw reach
+         (~0.26 m from the shoulder) from a bot parked at the lane end.
+         They sit just beyond the bots' travel limit (x=1.70) because nothing a
+         bot drives OVER can be pickable: the stowed arm hangs to z~-0.35 and
+         full extension reaches only -0.371. The stowed claw sits 61 mm AHEAD
+         of the bot (x<=1.782 at the limit), hence the 1.80 edge. A bot parks at
+         the lane end and reaches forward; its down_cam looks onto the table.
+         Mirrored as keep-out zones table_A / table_B in keepout.py. -->
+    <body name="table_A" pos="1.88 0.231 -0.26">
+      <geom name="table_A_top" type="box" size="0.08 0.10 0.01" rgba="0.62 0.47 0.32 1"/>
+      <geom type="cylinder" size="0.012 0.115" pos="  0.06   0.08 -0.125" rgba="0.35 0.26 0.18 1"/>
+      <geom type="cylinder" size="0.012 0.115" pos="  0.06  -0.08 -0.125" rgba="0.35 0.26 0.18 1"/>
+      <geom type="cylinder" size="0.012 0.115" pos=" -0.06   0.08 -0.125" rgba="0.35 0.26 0.18 1"/>
+      <geom type="cylinder" size="0.012 0.115" pos=" -0.06  -0.08 -0.125" rgba="0.35 0.26 0.18 1"/>
+    </body>
+    <body name="table_B" pos="1.88 0.551 -0.26">
+      <geom name="table_B_top" type="box" size="0.08 0.10 0.01" rgba="0.62 0.47 0.32 1"/>
+      <geom type="cylinder" size="0.012 0.115" pos="  0.06   0.08 -0.125" rgba="0.35 0.26 0.18 1"/>
+      <geom type="cylinder" size="0.012 0.115" pos="  0.06  -0.08 -0.125" rgba="0.35 0.26 0.18 1"/>
+      <geom type="cylinder" size="0.012 0.115" pos=" -0.06   0.08 -0.125" rgba="0.35 0.26 0.18 1"/>
+      <geom type="cylinder" size="0.012 0.115" pos=" -0.06  -0.08 -0.125" rgba="0.35 0.26 0.18 1"/>
+    </body>
 
     <!-- ============ TURNTABLES: hinge about Z, rail segment rides on top ============ -->
     <!-- left station x=0.211: A1 (lane A) + B1 (lane B), shaft-coupled via equality -->
@@ -149,7 +208,45 @@
                 <joint class="sc15" name="j5_wrist_roll" type="hinge" axis="0 0 1" range="-3.1 3.1"/>
                 <!-- gripper tip: wrist pitch -> tip = 90 + 64.8 = 154.8 mm (doc L3) -->
                 <site name="tip" pos="0 0 -0.0648" size="0.006" rgba="1 0.4 0 1"/>
-                <geom type="box" size="0.018 0.014 0.0324" pos="0 0 -0.0324" mass="0.09" rgba="0.9 0.7 0.1 1"/>
+                <!-- two-finger PARALLEL claw: the 6th SC15 is the palm. Each side is a
+                     parallelogram 4-bar: the horn drives the outer link (claw_r), a 1:1
+                     gear pair mirrors it (claw_l), and the jaw hangs from the link ends
+                     counter-rotated by the link angle (equalities below), so the pad
+                     faces stay vertical and parallel while translating on a 35 mm arc.
+                     Inner links are visual. Pads 18.62 mm tall (README "jaw tip"),
+                     centered on the tip site when closed.
+                     claw angle 0 = closed (2 mm pad gap), 1.2 rad = open (~67 mm gap). -->
+                <geom name="palm" type="box" size="0.026 0.012 0.015" pos="0 0 -0.015" mass="0.06" rgba="0.2 0.2 0.22 1"/>
+                <geom class="claw_vis" type="cylinder" size="0.005 0.013" zaxis="0 1 0" pos=" 0.020 0 -0.030" rgba="0.1 0.55 0.6 1"/>
+                <geom class="claw_vis" type="cylinder" size="0.005 0.013" zaxis="0 1 0" pos="-0.020 0 -0.030" rgba="0.1 0.55 0.6 1"/>
+                <body name="link_r" pos="0.020 0 -0.030">
+                  <joint class="claw" name="claw_r" axis="0 -1 0"/>
+                  <geom class="claw_link" pos="0 0.006 -0.0175"/>
+                  <geom class="claw_link" pos="0 -0.006 -0.0175"/>
+                  <body name="jaw_r" pos="0 0 -0.035">
+                    <joint class="claw_jaw" name="jaw_r" axis="0 -1 0"/>
+                    <geom class="claw_jawplate" pos="-0.005 0 0.002"/>
+                    <geom class="jaw" name="pad_r" pos="-0.0125 0 0.0002"/>
+                  </body>
+                </body>
+                <body name="link2_r" pos="0.010 0 -0.030">
+                  <joint class="claw_vis" name="link2_r" axis="0 -1 0"/>
+                  <geom class="claw_vis" type="box" size="0.002 0.003 0.0175" pos="0 0 -0.0175" mass="0.001" rgba="0.35 0.35 0.38 1"/>
+                </body>
+                <body name="link_l" pos="-0.020 0 -0.030">
+                  <joint class="claw" name="claw_l" axis="0 1 0"/>
+                  <geom class="claw_link" pos="0 0.006 -0.0175"/>
+                  <geom class="claw_link" pos="0 -0.006 -0.0175"/>
+                  <body name="jaw_l" pos="0 0 -0.035">
+                    <joint class="claw_jaw" name="jaw_l" axis="0 1 0"/>
+                    <geom class="claw_jawplate" pos="0.005 0 0.002"/>
+                    <geom class="jaw" name="pad_l" pos="0.0125 0 0.0002"/>
+                  </body>
+                </body>
+                <body name="link2_l" pos="-0.010 0 -0.030">
+                  <joint class="claw_vis" name="link2_l" axis="0 1 0"/>
+                  <geom class="claw_vis" type="box" size="0.002 0.003 0.0175" pos="0 0 -0.0175" mass="0.001" rgba="0.35 0.35 0.38 1"/>
+                </body>
               </body>
             </body>
           </body>
@@ -190,12 +287,80 @@
                 <joint class="sc15" name="j5_wrist_roll_b2" type="hinge" axis="0 0 1" range="-3.1 3.1"/>
                 <!-- gripper tip: wrist pitch -> tip = 90 + 64.8 = 154.8 mm (doc L3) -->
                 <site name="tip_b2" pos="0 0 -0.0648" size="0.006" rgba="1 0.4 0 1"/>
-                <geom type="box" size="0.018 0.014 0.0324" pos="0 0 -0.0324" mass="0.09" rgba="0.9 0.7 0.1 1"/>
+                <!-- two-finger PARALLEL claw: the 6th SC15 is the palm. Each side is a
+                     parallelogram 4-bar: the horn drives the outer link (claw_r), a 1:1
+                     gear pair mirrors it (claw_l), and the jaw hangs from the link ends
+                     counter-rotated by the link angle (equalities below), so the pad
+                     faces stay vertical and parallel while translating on a 35 mm arc.
+                     Inner links are visual. Pads 18.62 mm tall (README "jaw tip"),
+                     centered on the tip site when closed.
+                     claw angle 0 = closed (2 mm pad gap), 1.2 rad = open (~67 mm gap). -->
+                <geom name="palm_b2" type="box" size="0.026 0.012 0.015" pos="0 0 -0.015" mass="0.06" rgba="0.2 0.2 0.22 1"/>
+                <geom class="claw_vis" type="cylinder" size="0.005 0.013" zaxis="0 1 0" pos=" 0.020 0 -0.030" rgba="0.85 0.45 0.25 1"/>
+                <geom class="claw_vis" type="cylinder" size="0.005 0.013" zaxis="0 1 0" pos="-0.020 0 -0.030" rgba="0.85 0.45 0.25 1"/>
+                <body name="link_r_b2" pos="0.020 0 -0.030">
+                  <joint class="claw" name="claw_r_b2" axis="0 -1 0"/>
+                  <geom class="claw_link" pos="0 0.006 -0.0175"/>
+                  <geom class="claw_link" pos="0 -0.006 -0.0175"/>
+                  <body name="jaw_r_b2" pos="0 0 -0.035">
+                    <joint class="claw_jaw" name="jaw_r_b2" axis="0 -1 0"/>
+                    <geom class="claw_jawplate" pos="-0.005 0 0.002"/>
+                    <geom class="jaw" name="pad_r_b2" pos="-0.0125 0 0.0002"/>
+                  </body>
+                </body>
+                <body name="link2_r_b2" pos="0.010 0 -0.030">
+                  <joint class="claw_vis" name="link2_r_b2" axis="0 -1 0"/>
+                  <geom class="claw_vis" type="box" size="0.002 0.003 0.0175" pos="0 0 -0.0175" mass="0.001" rgba="0.35 0.35 0.38 1"/>
+                </body>
+                <body name="link_l_b2" pos="-0.020 0 -0.030">
+                  <joint class="claw" name="claw_l_b2" axis="0 1 0"/>
+                  <geom class="claw_link" pos="0 0.006 -0.0175"/>
+                  <geom class="claw_link" pos="0 -0.006 -0.0175"/>
+                  <body name="jaw_l_b2" pos="0 0 -0.035">
+                    <joint class="claw_jaw" name="jaw_l_b2" axis="0 1 0"/>
+                    <geom class="claw_jawplate" pos="0.005 0 0.002"/>
+                    <geom class="jaw" name="pad_l_b2" pos="0.0125 0 0.0002"/>
+                  </body>
+                </body>
+                <body name="link2_l_b2" pos="-0.010 0 -0.030">
+                  <joint class="claw_vis" name="link2_l_b2" axis="0 1 0"/>
+                  <geom class="claw_vis" type="box" size="0.002 0.003 0.0175" pos="0 0 -0.0175" mass="0.001" rgba="0.35 0.35 0.38 1"/>
+                </body>
               </body>
             </body>
           </body>
         </body>
       </body>
+    </body>
+
+    <!-- ============ CUBES on the table: 40 mm, 30 g (PLA-ish), free bodies ============
+         Three per end table, resting on the top (center z = -0.25 + 0.02),
+         0.14-0.23 m ahead of a bot parked at the lane end, most turned a
+         little (euler z, rad) so perception and claw roll get exercised. Declared
+         last so the bot/turntable joint indices above are unchanged. -->
+    <body name="cube_red" pos="1.84 0.191 -0.23">
+      <freejoint name="cube_red_free"/>
+      <geom name="cube_red" type="box" size="0.02 0.02 0.02" mass="0.03" rgba="0.85 0.2 0.2 1"/>
+    </body>
+    <body name="cube_green" pos="1.84 0.271 -0.23" euler="0 0 0.35">
+      <freejoint name="cube_green_free"/>
+      <geom name="cube_green" type="box" size="0.02 0.02 0.02" mass="0.03" rgba="0.25 0.7 0.3 1"/>
+    </body>
+    <body name="cube_blue" pos="1.91 0.231 -0.23" euler="0 0 -0.61">
+      <freejoint name="cube_blue_free"/>
+      <geom name="cube_blue" type="box" size="0.02 0.02 0.02" mass="0.03" rgba="0.2 0.4 0.85 1"/>
+    </body>
+    <body name="cube_yellow" pos="1.84 0.511 -0.23" euler="0 0 0.17">
+      <freejoint name="cube_yellow_free"/>
+      <geom name="cube_yellow" type="box" size="0.02 0.02 0.02" mass="0.03" rgba="0.95 0.8 0.15 1"/>
+    </body>
+    <body name="cube_purple" pos="1.84 0.591 -0.23" euler="0 0 0.79">
+      <freejoint name="cube_purple_free"/>
+      <geom name="cube_purple" type="box" size="0.02 0.02 0.02" mass="0.03" rgba="0.6 0.3 0.75 1"/>
+    </body>
+    <body name="cube_orange" pos="1.91 0.551 -0.23" euler="0 0 -0.26">
+      <freejoint name="cube_orange_free"/>
+      <geom name="cube_orange" type="box" size="0.02 0.02 0.02" mass="0.03" rgba="0.95 0.5 0.15 1"/>
     </body>
   </worldbody>
 
@@ -203,6 +368,19 @@
     <!-- the shared drive shaft at each station: both turntables rotate together -->
     <joint joint1="tt_A1_rot" joint2="tt_B1_rot" polycoef="0 1 0 0 0"/>
     <joint joint1="tt_A2_rot" joint2="tt_B2_rot" polycoef="0 1 0 0 0"/>
+    <!-- claw: gear pair mirrors the servo-driven right link onto the left;
+         each jaw counter-rotates by its link angle (parallelogram: pads stay
+         parallel); the inner (visual) links follow the outer ones -->
+    <joint joint1="claw_l"  joint2="claw_r" polycoef="0 1 0 0 0"/>
+    <joint joint1="jaw_r"   joint2="claw_r" polycoef="0 -1 0 0 0" class="rigid_link"/>
+    <joint joint1="jaw_l"   joint2="claw_l" polycoef="0 -1 0 0 0" class="rigid_link"/>
+    <joint joint1="link2_r" joint2="claw_r" polycoef="0 1 0 0 0"/>
+    <joint joint1="link2_l" joint2="claw_l" polycoef="0 1 0 0 0"/>
+    <joint joint1="claw_l_b2"  joint2="claw_r_b2" polycoef="0 1 0 0 0"/>
+    <joint joint1="jaw_r_b2"   joint2="claw_r_b2" polycoef="0 -1 0 0 0" class="rigid_link"/>
+    <joint joint1="jaw_l_b2"   joint2="claw_l_b2" polycoef="0 -1 0 0 0" class="rigid_link"/>
+    <joint joint1="link2_r_b2" joint2="claw_r_b2" polycoef="0 1 0 0 0"/>
+    <joint joint1="link2_l_b2" joint2="claw_l_b2" polycoef="0 1 0 0 0"/>
   </equality>
 
   <actuator>
@@ -228,6 +406,9 @@
     <position class="sc15" name="a3_b2" joint="j3_elbow_b2" ctrlrange="-2.4 2.4"/>
     <position class="sc15" name="a4_b2" joint="j4_wrist_pitch_b2" ctrlrange="-1.9 1.9"/>
     <position class="sc15" name="a5_b2" joint="j5_wrist_roll_b2" ctrlrange="-3.1 3.1"/>
+    <!-- claw servo (6th SC15): separate channel from the arm spline (§1.8) -->
+    <position class="claw" name="claw" joint="claw_r"/>
+    <position class="claw" name="claw_b2" joint="claw_r_b2"/>
   </actuator>
 
   <sensor>
@@ -247,5 +428,7 @@
     <jointpos name="b2_yaw_pos" joint="b2_yaw"/>
     <jointpos name="tt_left_pos" joint="tt_A1_rot"/>
     <jointpos name="tt_right_pos" joint="tt_A2_rot"/>
+    <jointpos name="claw_pos" joint="claw_r"/>
+    <jointpos name="claw_b2_pos" joint="claw_r_b2"/>
   </sensor>
 </mujoco>

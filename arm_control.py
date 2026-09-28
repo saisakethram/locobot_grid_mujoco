@@ -78,6 +78,23 @@ class SimBackend:
         self.tip = model.site(tip).id if tip else None
         self.body = model.body(body).id if body else None
         self._scratch = mujoco.MjData(model)     # FK without touching the sim
+        # claw geometry for keep-out: collidable boxes in the subtree below
+        # the tip's body (palm, links, jaws, pads); corners follow the live
+        # claw opening and wrist roll
+        self.claw_geoms = []
+        if tip:
+            root = model.site_bodyid[self.tip]
+            def below(b):
+                while b > 0:
+                    if b == root:
+                        return True
+                    b = model.body_parentid[b]
+                return False
+            self.claw_geoms = [g for g in range(model.ngeom)
+                               if below(model.geom_bodyid[g])
+                               and model.geom_type[g] == mujoco.mjtGeom.mjGEOM_BOX
+                               and (model.geom_contype[g] or model.geom_conaffinity[g])]
+        self._corners = np.array([[sx, sy, sz] for sx in (-1, 1) for sy in (-1, 1) for sz in (-1, 1)])
         self.range = np.array([model.jnt_range[j] for j in jids])
         self.ctrlrange = np.array([model.actuator_ctrlrange[a] for a in self.act])
 
@@ -95,10 +112,12 @@ class SimBackend:
         for a, v in zip(self.act, q):
             self.data.ctrl[a] = v
 
-    def fk(self, q=None):
+    def fk(self, q=None, claw=False):
         """World points [shoulder, elbow, wrist, tip] and the bot body pose
         (pos, mat) for arm angles q at the bot's CURRENT position. q=None =
-        the live measured pose. (Hardware: chain FK from the rail encoder.)"""
+        the live measured pose. (Hardware: chain FK from the rail encoder.)
+        claw=True also returns the claw's box corners (N,3) at the live
+        claw opening."""
         s = self._scratch
         s.qpos[:] = self.data.qpos
         if q is not None:
@@ -106,12 +125,40 @@ class SimBackend:
                 s.qpos[a] = v
         mujoco.mj_kinematics(self.model, s)
         pts = [s.xanchor[j].copy() for j in self.jids[1:4]] + [s.site_xpos[self.tip].copy()]
-        return pts, s.xpos[self.body].copy(), s.xmat[self.body].copy()
+        out = (pts, s.xpos[self.body].copy(), s.xmat[self.body].copy())
+        if not claw:
+            return out
+        cp = [s.geom_xpos[g] + (self._corners * self.model.geom_size[g]) @ s.geom_xmat[g].reshape(3, 3).T
+              for g in self.claw_geoms]
+        return out + (np.vstack(cp) if cp else None,)
 
     def set_pose(self, q):
         """Sim-only: teleport the joints (initial conditions)."""
         for a, v in zip(self.qadr, q):
             self.data.qpos[a] = v
+
+
+def model_sag(backend):
+    """sag(q_wanted) for §1.6 feed-forward, from the MuJoCo model — the sim
+    stand-in for the measured sag table. A P-servo (gain kp) holding against
+    gravity torque g(q) settles at q = sent - g/kp, so sent = wanted + g/kp.
+    g comes from the model at rest (arm masses + claw; payload not included).
+    On hardware this is replaced by the bench lookup (angle x load)."""
+    m, s = backend.model, mujoco.MjData(backend.model)
+    kp = np.array([m.actuator_gainprm[a][0] for a in backend.act])
+    dofs = [m.jnt_dofadr[j] for j in backend.jids]
+    bias = np.zeros(m.nv)
+
+    def sag(q):
+        s.qpos[:] = backend.data.qpos
+        for a, v in zip(backend.qadr, q):
+            s.qpos[a] = v
+        s.qvel[:] = 0.0
+        mujoco.mj_kinematics(m, s)
+        mujoco.mj_comPos(m, s)
+        mujoco.mj_rne(m, s, 0, bias)          # qvel = 0 -> gravity only
+        return bias[dofs] / kp
+    return sag
 
 
 class ArmController:
